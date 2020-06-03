@@ -37,7 +37,7 @@ def importContext(f):
                                 attrdict['type'] = class_id
                     else:
                         if 'self' == vid:
-                            class_id = attrdict['type']
+                            class_id = vdict['type']
                             vdict['type'] = NONE
                         v[vid] = Variable(**vdict)
                         if 'self' == vid:

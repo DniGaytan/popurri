@@ -8,6 +8,7 @@ from copy import deepcopy
 
 
 def importMemory(f):
+    'This function imports the pre-allocated memory of the parsed .pop file'
     memHandler = MemoryHandler()
     mem_dict = json.loads(f.readline())
     for ctx, mem in mem_dict.items():
@@ -21,6 +22,12 @@ def importMemory(f):
 
 
 def importContext(f):
+    '''
+    This function imports the varTable and funcTable from the given file.
+    And due to its dictionary structure, it's parsed thoroughly to re-construct it
+    whilst using the Variable and Funtion constructors.
+    It returns a ContextWrapper object which contains both structures
+    '''
     # Import Variables
     vars = json.loads(f.readline())
     for ctx in vars.values():  # Iterate over contexts
@@ -54,6 +61,7 @@ def importContext(f):
     return ContextWrapper(variables=vars, functions=funcs)
 
 
+# Maps Popurri tokens to their respective python function
 opMap = {
     ADD: add,
     MINUS: sub,
@@ -73,15 +81,25 @@ opMap = {
 
 
 def handleBinaryOperation(memHandler, op, l_val, r_val, res):
+    'applies the binary operator function specified by opMap and stores it in the result address'
     opFunc = opMap[op]
     memHandler.update(res, opFunc(l_val, r_val))
 
 def handleUnaryOperation(memHandler, op, r_val, res):
+    'applies the unary operator function specified by opMap and stores it in the result address'
     opFunc = opMap[op]
     memHandler.update(res, opFunc(r_val))
 
 
 def run(obj_file):
+    '''
+    This function accepts a .pobj (Popurri Object Code file), and it imports the following structures:
+        - Variable Table
+        - Function Table
+        - Memory Handler
+        - List of quadruples to execute
+    And executes said quadruples using the formerly mentioned structures
+    '''
     with open(obj_file, 'r') as f:
         ctx = importContext(f)
         memHandler = importMemory(f)
@@ -97,9 +115,6 @@ def run(obj_file):
     ip_stack = []
     while ip < len(quads):
         quad = quads[ip]
-        # print(ip + 1, '(', end='')
-        # print(stringifyToken(quad[0]), *quad[1:], sep=', ', end='')
-        # print(')')
 
         op, l, r, res = quad
         if type(l) == int:
@@ -125,8 +140,7 @@ def run(obj_file):
 
                 # Remove return value from memory & global varTable
                 del ctx.variables['global'][func_name]
-                memHandler.contexts[GLOBAL].sections[tokenize(
-                    return_var.type)].pop()
+                memHandler.contexts[GLOBAL].sections[return_var.type].pop()
 
             if l_val >= 28000 and l_val <= 30000:
                 val_type = memHandler.getAddressType(l_val)
@@ -202,7 +216,7 @@ def run(obj_file):
                 attr_val = memHandler.getValue(attr.address)
                 func_mem.reserve(
                     context=LOCAL,
-                    dtype=tokenize(attr.type),
+                    dtype=attr.type,
                     value=attr_val
                 )
                 if attr.isArray(): # Allocate array slots
@@ -210,7 +224,7 @@ def run(obj_file):
                         slot_val = memHandler.getValue(attr.address + i)
                         func_mem.reserve(
                             context=LOCAL,
-                            dtype=tokenize(attr.type),
+                            dtype=attr.type,
                             value=slot_val
                         )
 
@@ -284,7 +298,7 @@ def run(obj_file):
             return_dtype = memHandler.getAddressType(res)
             return_var = Variable(
                 id=ctx.top(),
-                type=stringifyToken(return_dtype)
+                type=return_dtype
             )
             return_var.address = prev_ctx.reserve(
                 context=GLOBAL,
@@ -310,11 +324,29 @@ def run(obj_file):
             prev_ctx = memCtxWrapper.pop()
             # Copy Global memory in case function did any changes
             prev_ctx.contexts[GLOBAL] = deepcopy(memHandler.contexts[GLOBAL])
+            memHandler = prev_ctx
+
+            # Allocate return var if nothing has been returned
+            if ctx.getVariable(ctx.top()) is None:
+                func = ctx.getFunction(
+                    ctx.top(),
+                    context=ctx.getClassContext() if ctx.insideClass() else 'global'
+                )
+                return_var = Variable(
+                    id=ctx.top(),
+                    type=func.return_type
+                )
+                return_var.address = memHandler.reserve(
+                    context=GLOBAL,
+                    dtype=func.return_type
+                )
+                ctx.addVariable(return_var)
 
             # Pop function/method context
             ctx.pop()
             if 'class ' in ctx.top():
                 ctx.pop()
+
             continue
 
         elif op == VERIFY:

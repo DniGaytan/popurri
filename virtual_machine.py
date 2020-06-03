@@ -124,6 +124,9 @@ def run(obj_file):
 
         # GOTOs
         if op == GOTO:
+            if not res:
+                return
+
             ip = res - 1
             continue
         elif (op == GOTOF and l_val == False or
@@ -142,11 +145,12 @@ def run(obj_file):
                 del ctx.variables['global'][func_name]
                 memHandler.contexts[GLOBAL].sections[return_var.type].pop()
 
-            if l_val >= 28000 and l_val <= 30000:
+            print('assigning', l_val, res)
+            if type(l_val) == int and l_val >= 28000 and l_val <= 30000:
                 val_type = memHandler.getAddressType(l_val)
                 if val_type == POINTER:
                     l_val = memHandler.getValue(l_val)
-            if res >= 28000 and res <= 30000:
+            if type(res) == int and res >= 28000 and res <= 30000:
                 res_type = memHandler.getAddressType(res)
                 if res_type == POINTER:
                     res = memHandler.getValue(res)
@@ -260,6 +264,7 @@ def run(obj_file):
             method_call = False  # Reset flag
         elif op == PARAM:
             if ctx.insideClass():
+                print(ctx.getClassContext(), ctx.top())
                 params = ctx.variables[ctx.getClassContext()][ctx.top()]
             else:
                 params = ctx.variables[ctx.top()]
@@ -327,11 +332,11 @@ def run(obj_file):
             memHandler = prev_ctx
 
             # Allocate return var if nothing has been returned
-            if ctx.getVariable(ctx.top()) is None:
-                func = ctx.getFunction(
-                    ctx.top(),
-                    context=ctx.getClassContext() if ctx.insideClass() else 'global'
-                )
+            func = ctx.getFunction(
+                ctx.top(),
+                context=ctx.getClassContext() if ctx.insideClass() else 'global'
+            )
+            if ctx.getVariable(ctx.top()) is None and func.return_type is not NONE:
                 return_var = Variable(
                     id=ctx.top(),
                     type=func.return_type

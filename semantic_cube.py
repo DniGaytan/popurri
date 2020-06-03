@@ -17,6 +17,10 @@ TYPE      :  'int' | 'float' | 'string' | 'bool' | '[float]' | '[int]' | '[bool]
 
 
 def bailaMijaConElSeñor(baile, mija=None, sr=None):
+    '''
+    Esta funcion checa si mija (l_type) baila (op) con el señor (r_type).
+    Es decir, verifica si es posible ejecutar la dada operación entre los tipos proporcionados
+    '''
     return bailes[baile].get((mija, sr), None)
 
 # Operations between user-defined classes are NOT allowed

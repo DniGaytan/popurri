@@ -5,19 +5,21 @@ import os
 
 
 def test_valid(compiler, files):
-    for test in test_files:
+    '''
+    This function checks if the given test files all compile successfully.
+    Raises error if otherwise
+    '''
+    for test in files:
         print("--------TESTING VALID INPUT", basename(test))
-        # try:
-        #     compiler.compile(test, export=False)
-        #     print("Compiled successfully!")
-        # except Exception as e:
-        #     print('Failed to compile, got: ', e)
-        #     exit(1)
         compiler.compile(test, export=False, debug_info=True)
 
 
 def test_malformed(compiler, files):
-    for test in test_files:
+    '''
+    This function checks if the given test files raise an error (sintactical or semantic).
+    Exits if no error raised.
+    '''
+    for test in files:
         print("--------TESTING MALFORMED INPUT", basename(test))
         try:
             compiler.compile(test, export=False, debug_info=True)

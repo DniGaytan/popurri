@@ -10,10 +10,7 @@ import json
 
 
 def pprint(*args):
-    '''
-    Esta funcion nos permite la impresion de una estructura
-    sin tener que formatear manualmente la forma de impresion.
-    '''
+    'Helper to pretty print any object with JSON style'
     opts = js.default_options()
     opts.indent_size = 2
     for arg in args:
@@ -21,10 +18,7 @@ def pprint(*args):
 
 
 def error(ctx, msg):
-    '''
-    Cuando se genera un error, regresa la excepcion con la linea en
-    donde el error se encuentra y el mensaje de este error
-    '''
+    'Creates exception object, with the given message and line'
     return Exception(f'ERROR ON LINE {ctx.start.line}: {msg}')
 
 
@@ -64,21 +58,18 @@ class QuadWrapper():
         self.quads[at] = tuple(new_quad)
 
     def topOperator(self):
-        '''
-        regresa el valor que se encuentra en el tope de la pila de operadores
-        '''
+        'regresa el valor que se encuentra en el tope de la pila de operadores'
         if len(self.operator_stack) == 0 or self.operator_stack[-1] == FALSEBOTTOM:
             return None
 
         return self.operator_stack[-1]
 
     def topJump(self):
-        '''
-        regresa el valor que se encuentra en el tope de la pila de saltos
-        '''
+        'regresa el valor que se encuentra en el tope de la pila de saltos'
         return self.jump_stack[-1] if len(self.jump_stack) > 0 else None
 
     def topAddress(self):
+        'regresa el valor que se encuentra en el tope de la pila de direcciones'
         return self.address_stack[-1] if len(self.address_stack) > 0 else None
 
     def popOperator(self):
@@ -362,8 +353,8 @@ class ContextWrapper():
         return {k: deepcopy(v) for k, v in self.variables[class_id].items() if type(v) != dict}
 
     def addVariable(self, var, context="global", insideClass=False):
-        variables = self.variables[self.getClassContext(
-        )] if insideClass else self.variables
+        'Adds the variable object to the corresponding context'
+        variables = self.variables[self.getClassContext()] if insideClass else self.variables
 
         if context in variables:
             variables[context][var.id] = var
@@ -518,8 +509,7 @@ class Function():
 class PopurriListener(ParseTreeListener):
     '''
     -Esta clase nos permite simular la creacion de tabla de variables
-    -[Tal vez podamos usar esta clase para simular la semantica basica de expresiones]
-    -Cada funcion 'enter' representa el estado cuando se inicia una  regla
+    -Cada funcion 'enter' representa el estado cuando se inicia una regla
     -Cada funcion 'exit' representa el estado cuando se acaba una regla
     '''
 
@@ -527,17 +517,13 @@ class PopurriListener(ParseTreeListener):
         self.ctxWrapper = ContextWrapper()
         self.quadWrapper = QuadWrapper()
         self.memHandler = MemoryHandler(mem_size)
+        # Flags for internal compiler use
         self.if_cond = False
         self.inside_expression = False
         self.param_count = -1
         self.func_count = -1
         self.func_returned_val = False
-        # a[ array_indexation_exp ]
-        self.array_active = False
         self.debug_info = debug_info
-        # (iter, array)
-        self.for_loop_stack = []
-        self.if_for = False
 
     def enterProgram(self, ctx):
         '''
@@ -552,9 +538,7 @@ class PopurriListener(ParseTreeListener):
         pass
 
     def printDebug(self):
-        '''
-        Print all debug information needed for developers.
-        '''
+        'Pretty print all debug information needed for developers.'
         print("--VARIABLES--")
         pprint(self.ctxWrapper.variables)
         print("--FUNCTIONS--")
@@ -607,7 +591,7 @@ class PopurriListener(ParseTreeListener):
     def enterDeclarations(self, ctx):
         '''
         [Declarations] is the first part of the rule Declarations
-        This rule fills the GOTO generated from program
+        This rule fills the GOTO generated from program (So class quads dont get executed)
         '''
         if self.ctxWrapper.top() == 'global':
             # Fill GOTO to declarations start (so classes dont get executed)
@@ -619,7 +603,7 @@ class PopurriListener(ParseTreeListener):
     def exitDeclarations(self, ctx):
         '''
         [Declarations] is the second part of the rule Declarations
-        This rule generates a new GOTO quad and waits its filling
+        This rule generates a new GOTO quad (which will be filled when "main" starts)
         '''
         if self.ctxWrapper.top() == 'global':
             goto_quad = Quadruple(GOTO)
@@ -752,6 +736,11 @@ class PopurriListener(ParseTreeListener):
         return func
 
     def enterFunction(self, ctx):
+        '''
+        [Function] first part of the rule Function
+        Creates the Function object and adds it to the global funcTable.
+        It also pushes the function id to the context stack
+        '''
         if self.ctxWrapper.functionExistsInContext(ctx.ID(), 'global'):
             raise error(ctx, FUNC_REDEFINITION.format(str(ctx.ID())))
 
@@ -792,8 +781,8 @@ class PopurriListener(ParseTreeListener):
 
     def getAccessType(self, ctx):
         '''
-        returns the access type of the requested [ctx]
-        [ty] = type
+        Tokenizes the access type of the context, returns PUBLIC token
+        if not present.
         '''
         ty = ctx.ACCESS_TYPE()
         return PUBLIC if ty is None else tokenize(ty)
@@ -801,12 +790,15 @@ class PopurriListener(ParseTreeListener):
     def enterClassDeclaration(self, ctx):
         '''
         [ClassDeclaration] is the first part of the rule ClassDeclaration
-        All class structure declarations will be handled by this function
 
         This function replaces declarations and attributes in order to simplify
         the process of handling data inside classes.
 
-        everything related to a class declaration is handled.
+        This rule handles attribute and method inheritance, and also parses the class'
+        attributes & methods and adds them to their respective tables.
+
+        It also allocates the class attributes into the LOCAL memory and saves a snapshot
+        of this context, so they don't get flushed when parsing methods.
         '''
         class_id = str(ctx.ID())
         if self.ctxWrapper.classExists(class_id):
@@ -892,9 +884,8 @@ class PopurriListener(ParseTreeListener):
         '''
         [ClassDeclaration] is the second part of the rule ClassDeclaration
 
-        this will eliminate this class context from the ctxWrapper
-        and eliminate data from LOCAL memory
-
+        this will pop the class context from the context stack
+        and empties the LOCAL and TEMPORARY contexts from memory
         '''
         self.ctxWrapper.pop()
         self.memHandler.flush(LOCAL)
@@ -921,10 +912,7 @@ class PopurriListener(ParseTreeListener):
     def enterMethod(self, ctx):
         '''
         [Method] this is the first part of the rule Method
-
-        all classes methods will be handled in this function
-
-        this function will update the method previously created in classDeclaration
+        this function updates the method's starting quad
         '''
         class_name = self.ctxWrapper.top()
         self.ctxWrapper.push('func ' + str(ctx.ID()))
@@ -936,8 +924,9 @@ class PopurriListener(ParseTreeListener):
         '''
         [Method] this is the second part of the rule Method
 
-        this function will just update the method previously created with new information
-        about quads_range and generating an ENDPROC quadruple
+        this function updates the method's ending quad (unless the function is empty)
+        and the LOCAL and TEMPORARY memory required by the method (era_local & era_tmp)
+        Also generates an ENDPROC quadruple
         '''
         name = self.ctxWrapper.pop()
         method = self.ctxWrapper.getFunction(
@@ -961,9 +950,8 @@ class PopurriListener(ParseTreeListener):
         '''
         [Statement] this is the first part of the rule Statement
 
-        all possible statements will be handled by this function
-
-        previous generated GOTO will be filled in this function
+        If all functions have been parsed, then this statement is the "main" start,
+        so the GOTO from global variable declaration is filled.
         '''
         self.inside_expression = False
 
@@ -980,7 +968,7 @@ class PopurriListener(ParseTreeListener):
             self.validateCalledIds(ctx)
 
     def exitStatement(self, ctx):
-        self.inside_expression = False
+        self.inside_expression = False  # Reset flag
 
     def enterBreakStmt(self, ctx):
         '''
@@ -988,7 +976,6 @@ class PopurriListener(ParseTreeListener):
 
         A GOTO quadruple is generated and a jump is inserted for the compiler
         to know a break stmt needs to be processed later
-
         '''
         self.quadWrapper.insertJump()
         self.quadWrapper.insertQuad(Quadruple(GOTO))
@@ -999,15 +986,20 @@ class PopurriListener(ParseTreeListener):
         '''
         [WhileLoop] this is the first part of the rule WhileLoop
 
-        jump is inserted and a loop is pushed back into loop stack
+        jump is inserted (Which will be used when filling the GOTOF quad)
+        and a loop is pushed back into loop stack (used when verifying a break
+        statement is being used correctly)
         '''
-        self.if_cond = True
+        self.if_cond = True  # Reuse flag to process condition
         self.quadWrapper.insertJump()
         self.ctxWrapper.pushLoop()
 
     def exitWhileLoop(self, ctx):
         '''
         [WhileLoop] this is the second part of the rule WhileLoop
+
+        It generates a GOTO quad to loop start, fills any break GOTOs added with next quad
+        And fills the GOTOF quad of the while cond
         '''
         # exit while GOTO quadruple is generated and the loop is popped from
         # the loop stack
@@ -1039,6 +1031,7 @@ class PopurriListener(ParseTreeListener):
         )
 
     def enterIterable(self, ctx):
+        'Parses iterable (i.e. array), and adds it to loop stack'
         if ctx.ID() is not None:
             self.validateCalledIds(ctx)
             iterable_addr = self.quadWrapper.topAddress()
@@ -1046,6 +1039,9 @@ class PopurriListener(ParseTreeListener):
             self.ctxWrapper.pushLoop(iterable)
 
     def enterForLoop(self, ctx):
+        '''
+        Creates the iterator variable and adds it to the current context varTable
+        '''
         # Add iterator to global varTable
         iterator = Variable(
             id=str(ctx.ID()),
@@ -1175,6 +1171,9 @@ class PopurriListener(ParseTreeListener):
     def exitBranch(self, ctx):
         '''
         [Branch] this is the second part of the rule Branch
+
+        Fills all GOTOs generated by if, elseif and else end with
+        the current quad_ptr
         '''
         self.if_cond = False
 
@@ -1209,6 +1208,10 @@ class PopurriListener(ParseTreeListener):
         self.if_cond = True
 
     def exitIfStmt(self, ctx):
+        '''
+        Fills if GOTOF with next quad (i.e. elseif, else or new statement)
+        while ignoring any breaks that might've been added inside if.
+        '''
         # Other jumps (breaks) might've been pushed inside If
         pending_jumps = self.quadWrapper.flushJumps()
 
@@ -1247,7 +1250,10 @@ class PopurriListener(ParseTreeListener):
 
     def enterReturnStmt(self, ctx):
         '''
-        [ReturnStmt] this is the first part of the rule ReturnStmt
+        [ReturnStmt] this is the first part of the rule ReturnStmt.
+
+        Verifies that return is being used inside non-void function.
+        Sets flag so expression result is allocated
         '''
         if self.ctxWrapper.top() == 'global':
             raise error(ctx, RETURN_OUTSIDE_FUNC)
@@ -1262,6 +1268,9 @@ class PopurriListener(ParseTreeListener):
     def exitReturnStmt(self, ctx):
         '''
         [ReturnStmt] this is the second part of the rule ReturnStmt
+
+        Validates returning type matches function return type, generates
+        GOTOR quad, and sets flag to specify that function did return value.
         '''
 
         # Validate return type matches function return type
@@ -1282,6 +1291,11 @@ class PopurriListener(ParseTreeListener):
     def exitCond(self, ctx):
         '''
         [Cond] this is the second part of the rule Cond
+
+        If Cond is being used in a if, elseif or while, validate that the result
+        is a boolean, and if so, generate a GOTOF.
+
+        If Cond is being used inside a function call, generate PARAM quad
         '''
         if len(self.quadWrapper.operator_stack) > 0 and self.quadWrapper.operator_stack[-1] is FALSEBOTTOM:
             self.quadWrapper.popOperator()
@@ -1326,8 +1340,12 @@ class PopurriListener(ParseTreeListener):
         if self.quadWrapper.topOperator() in [MULT, MOD, DIV]:
             self.quadWrapper.generateQuad(ctx, self.memHandler)
 
-    # Helper to stringify 'constant' rule
     def getConstant(self, ctx):
+        '''
+        Helper to stringify "constant" rule
+        
+        Also pushes the constant's type & allocates it
+        '''
         if ctx.CONST_BOOL() is not None:
             value = str(ctx.CONST_BOOL()) == 'true'
             self.quadWrapper.insertType(BOOL)
@@ -1352,7 +1370,10 @@ class PopurriListener(ParseTreeListener):
 
     def validateCalledIds(self, ctx, is_function=False):
         '''
-        Helper to validate id(s) being called (be them )
+        Helper to validate id(s) being called.
+
+        If [is_function] is set, then it verifies said function exists in the global
+        context (or function context if being called by object). 
         '''
         ids = [str(id) for id in ctx.ID()]
 
@@ -1422,9 +1443,6 @@ class PopurriListener(ParseTreeListener):
             return id
 
     def enterVal(self, ctx):
-        '''
-
-        '''
         if ctx.unaryAddOp() is not None:
             self.quadWrapper.insertAddress(None)
             self.quadWrapper.insertType(NONE)
@@ -1461,14 +1479,14 @@ class PopurriListener(ParseTreeListener):
 
     def enterUnaryAddOp(self, ctx: PopurriParser.UnaryAddOpContext):
         op = ctx.getText()
-        # Little hack due to how insertOperator tokenizes strings
+        # Little hack since insertOperator tokenizes strings
         self.quadWrapper.insertOperator(UNARYADD if op == '+' else UNARYMINUS)
 
     def enterIndexation(self, ctx):
-        self.array_active = True
         self.quadWrapper.insertOperator(VERIFY)
 
     def exitIndexation(self, ctx):
+        'Generates VERIFY quad, and handles address manipulation'
         # Need to check if the current array is using an ID as iterable.
         exp_result = self.quadWrapper.popAddress()
         array_var_starting_address = self.quadWrapper.popDim()
@@ -1525,6 +1543,10 @@ class PopurriListener(ParseTreeListener):
         self.inside_expression = True
 
     def exitAssignment(self, ctx):
+        '''
+        Generate ASSIGN quad to store right-hand value to left-hand address (if types match)
+        It also handles shorthand operator assignment (+=, -=, etc.)
+        '''
         if self.quadWrapper.topOperator() in [ASSIGN, ADDASSIGN, MINUSASSIGN, MULTASSIGN, DIVASSIGN, MODASSIGN]:
             res_address = self.quadWrapper.popAddress()
             var_address = self.quadWrapper.popAddress()
@@ -1571,6 +1593,11 @@ class PopurriListener(ParseTreeListener):
             ))
 
     def enterFuncCall(self, ctx):
+        '''
+        Validates IDs being called (e.g. self.method(), obj.method() or myFunc())
+        Generates ERAC quad to allocate class attributes (if class method is being called)
+        And ERA quad to allocate function required memory
+        '''
         ids = self.validateCalledIds(ctx, is_function=True)
         if len(ids) == 2:
             # Quad to allocate class in memory
@@ -1590,6 +1617,10 @@ class PopurriListener(ParseTreeListener):
         self.param_count = 1
 
     def exitFuncCall(self, ctx):
+        '''
+        Validates function and call signatures match.
+        Allocates return value if funcCall is being used in expression
+        '''
         ids = [str(id) for id in ctx.ID()]
 
         # check funcCall by using the retrieved ids from call
@@ -1674,9 +1705,7 @@ class PopurriListener(ParseTreeListener):
 
     def handlePrint(self, PRINT_OP):
         '''
-        print helper
-
-        generates all print quadruples
+        Generates print quadruples from cond parameters
         '''
         print_quads = []
         while True:

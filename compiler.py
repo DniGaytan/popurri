@@ -27,6 +27,7 @@ class Compiler(object):
         self.mem_size = mem_size
 
     def exportOvejota(self, listener, filename):
+        'Exports a JSON with the generated object code from parsing the given filename'
         with open(filename, 'w') as f:
             variables = listener.ctxWrapper.variables
             funcs = listener.ctxWrapper.functions
@@ -37,6 +38,11 @@ class Compiler(object):
                 f.write('\n')
 
     def compile(self, file, export=True, debug_info=False):
+        '''
+        Receives an input file and parses it with PopurriListener.
+        Creates a ".pobj" file with the generated object code if the 
+        export flag is set to True
+        '''
         if not isfile(file):
             raise Exception(f'Error: {file} not found')
 

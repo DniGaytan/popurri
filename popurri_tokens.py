@@ -91,6 +91,7 @@ tokens = [
 
 
 def tokenize(v):
+    'Returns the token (int) for the specified string'
     if type(v) == int:  # Already tokenized
         return v
 
@@ -98,6 +99,7 @@ def tokenize(v):
 
 
 def tokenizeByValue(val):
+    'Gets type of the parameter and returns its token'
     if type(val).__name__ == 'str':
         return tokens.index('string')
 
@@ -105,6 +107,7 @@ def tokenizeByValue(val):
 
 
 def tokenizeContext(ctx_str):
+    'Returns LOCAL token if inside class or function, otherwise GLOBAL token'
     if ctx_str[:5] == 'class' or ctx_str[:4] == 'func':
         return LOCAL
 
@@ -112,4 +115,5 @@ def tokenizeContext(ctx_str):
 
 
 def stringifyToken(token):
+    'Maps token to its respective string value'
     return tokens[token]

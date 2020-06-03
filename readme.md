@@ -64,6 +64,12 @@ class numeros -> numeros_2 {
 
 La herencia se maneja pasando primero el id de la clase padre, seguido de la clase hijo. Ademas, al igual que en otros lenguajes, los atributos de la clase padre se pasan directamente a la clase hijo.
 
+Ahora, para crear un objeto de alguna clase, basta con escribir lo siguiente:
+
+```
+var numeros_obj : numeros
+```
+
 ## Funciones
 
 La sintaxis de una funcion es la que sigue:
@@ -95,3 +101,43 @@ Por otro lado, `print` y `println` son casi identicos. Mientras que `print` impr
 
 ## Variables
 
+Popurrí utiliza un formato distinto para las variables y arreglos. Sentimos que es una manera mas comoda de definir variables dentro de un lenguaje.
+
+La forma de declarar variables es la siguiente:
+
+```
+var saludo : string
+```
+En el codigo de arriba se puede notar una mezcla de sintaxis de varios lenguajes.
+
+Ahora, para los arreglos se tiene el siguiente formato:
+
+```
+var lista_enteros : [int] [10] 
+```
+
+La declaracion anterior difiere mucho de la declaracion de variable y esto es debido a que queriamos hacer notar cuando un elemento es un arreglo, con el fin de confundirlos al leer codigo.
+
+## Operaciones
+
+Muchas operaciones que conoces son admitidas en el lenguaje, esto quiere decir que los siguientes operadores son aceptados:
+
+- Operadores de aritméticos:
+    - `+ - * / % =`
+- Operadores relacionales:
+    - `> >= < <= is is not`
+- Operadores logicos:
+    - `and or`
+
+## Ejecucion
+
+Para poder ejecutar el codigo como usuario se debe de realizar la siguiente serie de pasos:
+
+1. Crear un archivo con sufijo `.pop`
+2. Escribir `module <id>` en el encabezado del archivo
+3. Escribir codigo
+4. Ejecutar en consola: ` <python alias> popurri.py <archivo a ejecutar> `
+
+Si se quiere ejecutar el codigo como desarrollador del lenguaje popurrí se omite solamente el punto 4 y se hace lo siguiente:
+
+- Ejecutar en consola: ` <python alias> test.py <archivo a ejecutar>`

@@ -29,9 +29,19 @@ def importContext(f):
                 for vid, vdict in v.items():
                     if 'self' in vdict:  # Var is object, iterate over attributes
                         for attrid, attrdict in vdict.items():
+                            if 'self' == attrid:
+                                class_id = attrdict['type']
+                                attrdict['type'] = NONE
                             vdict[attrid] = Variable(**attrdict)
+                            if 'self' == attrid:
+                                attrdict['type'] = class_id
                     else:
+                        if 'self' == vid:
+                            class_id = attrdict['type']
+                            vdict['type'] = NONE
                         v[vid] = Variable(**vdict)
+                        if 'self' == vid:
+                            vdict['type'] = class_id
             else:
                 ctx[k] = Variable(**v)
 

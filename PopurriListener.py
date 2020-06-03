@@ -247,8 +247,7 @@ class ContextWrapper():
         return {k: deepcopy(v) for k, v in self.variables[class_id].items() if type(v) != dict}
 
     def addVariable(self, var, context="global", insideClass=False):
-        variables = self.variables[self.getClassContext(
-        )] if insideClass else self.variables
+        variables = self.variables[self.getClassContext()] if insideClass else self.variables
 
         if context in variables:
             variables[context][var.id] = var
@@ -681,6 +680,9 @@ class PopurriListener(ParseTreeListener):
                         )
 
                 self.ctxWrapper.addVariable(var, class_id)
+
+        if class_id not in self.ctxWrapper.variables: # Add empty varTable if no attributes
+            self.ctxWrapper.variables[class_id] = {}
 
         # Parse class methods
         for method in ctx.method():

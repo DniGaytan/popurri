@@ -190,7 +190,7 @@ def run(obj_file):
         elif op == PRINT or op == PRINTLN:
             if res >= 28000 and res <= 30000: # POINTER
                 res = memHandler.getValue(res)
-            print(memHandler.getValue(res), end=' ' if PRINT else '\n')
+            print(memHandler.getValue(res), end=' ' if op == PRINT else '\n')
 
         # Classes
         elif op == ERAC:
@@ -392,6 +392,7 @@ def run(obj_file):
             index = l_val
             lInf = r_val
             lSup = memHandler.getValue(res)
+            print(lInf, index, lSup)
 
             if index < lInf or index > lSup:
                 raise Exception(OUT_OF_RANGE.format(index))

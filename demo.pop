@@ -28,10 +28,19 @@ class Parent -> Child {
         self.initParent(name, ssn, parent_name)
         self.age = age
     }
+
+    func printChildAttrs() {
+        println('-------parent-------')
+        self.printParentAttrs()
+        print('age:', self.age, '\n')
+        for i in self.toys {
+            print(self.toys[i])
+        }
+    }
 }
 
 # Globals
-var p : Parent, c : Child
+var p : Parent, c : Child, tmp : string
 
 # Functions
 
@@ -39,4 +48,8 @@ var p : Parent, c : Child
 p.initParent("Diego", "1234567890", "?")
 p.printParentAttrs()
 c.initChild("Hijo", "n/a", p.name, 10)
-
+for i in c.toys {
+    input(tmp)
+    c.toys[i] = tmp
+}
+c.printChildAttrs()

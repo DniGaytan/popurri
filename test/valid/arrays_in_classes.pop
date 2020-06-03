@@ -5,8 +5,9 @@ class arrayClass {
     func arrayManipulation(string a) {
         self.b = 2
         self.b = self.strVar[1]
-        self.strVar[1 + 1 + 1 + 1] = self.strVar[self.strVar[1 + 1 + 1]]
+        self.strVar[1 + 1 + 1] = self.strVar[self.strVar[1 + 1 + 1]]
     }
 }
 
-var arr : [int] [5]
+var arr : [int] [5], c : arrayClass
+c.arrayManipulation('yay')

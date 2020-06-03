@@ -56,15 +56,21 @@ FLOAT = 37
 BOOL = 38
 STRING = 39
 POINTER = 40
+NONE = 41
 
 # Contexts
-GLOBAL = 41
-LOCAL = 42
-TEMPORAL = 43
-CONSTANT = 44
+GLOBAL = 42
+LOCAL = 43
+TEMPORAL = 44
+CONSTANT = 45
 
 # Arrays
-VERIFY = 45
+VERIFY = 46
+
+# Access Types
+PUBLIC = 47
+PROTECTED = 48
+PRIVATE = 49
 
 # (Internal use only)
 FALSEBOTTOM = 999999
@@ -77,9 +83,10 @@ tokens = [
     '+', '-',  # Unary Operators
     'print', 'println', 'input',  # Special Functions
     '(', ')',  # Parenthesis
-    'int', 'float', 'bool', 'string', 'pointer',  # Types
+    'int', 'float', 'bool', 'string', 'pointer', 'void',  # Types
     'global', 'local', 'temporal', 'constant',  # Contexts
     'verify',  # Arrays
+    'public', 'protected', 'private'  # Access Types
 ]
 
 

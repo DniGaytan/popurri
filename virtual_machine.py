@@ -1,5 +1,5 @@
 from PopurriListener import ContextWrapper, QuadWrapper, Variable, Function, pprint
-from memory import MemoryHandler, Memory
+from memory import MemoryHandler, MemoryContext
 from popurri_tokens import *
 from error_tokens import *
 from operator import *
@@ -11,7 +11,7 @@ def importMemory(f):
     memHandler = MemoryHandler()
     mem_dict = json.loads(f.readline())
     for ctx, mem in mem_dict.items():
-        memObj = Memory(mem['start'], mem['max_size'])
+        memObj = MemoryContext(mem['start'], mem['max_size'])
         for section, spaces in mem['sections'].items():
             memObj.sections[int(section)] = spaces
 
@@ -29,9 +29,19 @@ def importContext(f):
                 for vid, vdict in v.items():
                     if 'self' in vdict:  # Var is object, iterate over attributes
                         for attrid, attrdict in vdict.items():
+                            if 'self' == attrid:
+                                class_id = attrdict['type']
+                                attrdict['type'] = NONE
                             vdict[attrid] = Variable(**attrdict)
+                            if 'self' == attrid:
+                                vdict[attrid].type = class_id
                     else:
+                        if 'self' == vid:
+                            class_id = vdict['type']
+                            vdict['type'] = NONE
                         v[vid] = Variable(**vdict)
+                        if 'self' == vid:
+                            v[vid].type = class_id
             else:
                 ctx[k] = Variable(**v)
 

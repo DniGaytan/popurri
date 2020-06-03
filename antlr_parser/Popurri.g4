@@ -25,7 +25,7 @@ declaration:
 	ID (':' (TYPE | ID | '[' TYPE ']' '[' CONST_I ']'))? assignment?;
 
 function:
-	'func' ID '(' funcParams? ')' (TYPE | ID)? '{' declarations* statement* '}';
+	'func' ID '(' funcParams? ')' TYPE? '{' declarations* statement* '}';
 
 classDeclaration:
 	'class' parent? ID '{' (attributes | method)+ '}';
@@ -33,7 +33,7 @@ parent: ID '->';
 attributes: ACCESS_TYPE? 'var' attribute (',' attribute)*;
 attribute: ID (':' (TYPE | '[' TYPE ']' '[' CONST_I ']'))?;
 method:
-	ACCESS_TYPE? 'func' ID '(' funcParams? ')' (TYPE | ID)? '{' declarations* statement* '}';
+	ACCESS_TYPE? 'func' ID '(' funcParams? ')' TYPE? '{' declarations* statement* '}';
 
 // Statements
 statement: (
@@ -67,7 +67,7 @@ val:
 		'(' cond ')'
 		| funcCall
 		| ID ('.' ID)? indexation?
-		| constant // TODO "addOp?"
+		| constant
 	);
 indexation: '[' exp ']';
 
@@ -89,9 +89,10 @@ constant:
 	| CONST_F
 	| CONST_STR
 	| const_arr
-	| 'none';
-const_arr: '[' condParam? ']';
-iterable: (ID '.')? ID | CONST_STR | const_arr;
+	;
+
+const_arr: '[' condParam ']';
+iterable: (ID '.')? ID;
 
 // Special functions
 printStmt: 'print' '(' condParam? ')';

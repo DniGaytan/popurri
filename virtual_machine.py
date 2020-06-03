@@ -110,6 +110,7 @@ def run(obj_file):
     memCtxWrapper.pop()  # Remove global context
     # Flag
     method_call = False
+    original_method_caller = None
     # Instruction Pointer
     ip = 0
     ip_stack = []
@@ -145,7 +146,6 @@ def run(obj_file):
                 del ctx.variables['global'][func_name]
                 memHandler.contexts[GLOBAL].sections[return_var.type].pop()
 
-            print('assigning', l_val, res)
             if type(l_val) == int and l_val >= 28000 and l_val <= 30000:
                 val_type = memHandler.getAddressType(l_val)
                 if val_type == POINTER:
@@ -212,6 +212,7 @@ def run(obj_file):
                     insideClass=ctx.top() != 'global'
                 )
                 ctx.push('class ' + class_var['self'].type)
+                original_method_caller = l
 
             for attr in class_var.values():
                 if attr.id == 'self':  # this attribute only contains the class name
@@ -264,7 +265,6 @@ def run(obj_file):
             method_call = False  # Reset flag
         elif op == PARAM:
             if ctx.insideClass():
-                print(ctx.getClassContext(), ctx.top())
                 params = ctx.variables[ctx.getClassContext()][ctx.top()]
             else:
                 params = ctx.variables[ctx.top()]
@@ -297,8 +297,6 @@ def run(obj_file):
 
         elif op == GOTOR:
             prev_ctx = memCtxWrapper.pop()
-            # Copy Global memory in case function did any changes
-            prev_ctx.contexts[GLOBAL] = deepcopy(memHandler.contexts[GLOBAL])
             # Allocate return value as global with func name
             return_dtype = memHandler.getAddressType(res)
             return_var = Variable(
@@ -324,18 +322,54 @@ def run(obj_file):
             continue
 
         elif op == ENDPROC:
+            prev_ctx = memCtxWrapper.pop()
+            # If inside class, copy over attributes (in case they were modified)
+            if ctx.insideClass():
+                class_var = ctx.getAttributes(ctx.getClassContext())
+
+                if len(ctx.context_stack) > 3: # Inside nested call
+                    for attr in class_var.values():
+                        if attr.id == 'self':  # this attribute only contains the class name
+                            continue
+
+                        # Pass attribute value to returning context 
+                        updated_val = memHandler.getValue(attr.address)
+                        prev_ctx.update(
+                            attr.address, # Since we're returning to another local context, address will be the same
+                            updated_val
+                        )
+                        # If attribute is an array, pass over the rest of its values as well
+                        if attr.isArray():
+                            for i in range(1, attr.arraySize):
+                                updated_val = memHandler.getValue(attr.address + i)
+                                prev_ctx.update(attr.address + i, updated_val)
+                else:  # Passing attributes to global context
+                    obj_var = ctx.getVariable(original_method_caller)
+                    for attr in class_var.values():
+                        if attr.id == 'self':  # this attribute only contains the class name
+                            continue
+
+                        # Pass attribute value to returning context 
+                        updated_val = memHandler.getValue(attr.address)
+                        prev_ctx.update(
+                            obj_var[attr.id].address,
+                            updated_val
+                        )
+                        # If attribute is an array, pass over the rest of its values as well
+                        if attr.isArray():
+                            for i in range(1, attr.arraySize):
+                                updated_val = memHandler.getValue(attr.address + i)
+                                prev_ctx.update(obj_var[attr.id].address + i, updated_val)
+
             # Return to previous context
             ip = ip_stack.pop()
-            prev_ctx = memCtxWrapper.pop()
-            # Copy Global memory in case function did any changes
-            prev_ctx.contexts[GLOBAL] = deepcopy(memHandler.contexts[GLOBAL])
             memHandler = prev_ctx
 
-            # Allocate return var if nothing has been returned
             func = ctx.getFunction(
                 ctx.top(),
                 context=ctx.getClassContext() if ctx.insideClass() else 'global'
             )
+            # Allocate return var if nothing has been returned
             if ctx.getVariable(ctx.top()) is None and func.return_type is not NONE:
                 return_var = Variable(
                     id=ctx.top(),

@@ -642,7 +642,7 @@ class PopurriListener(ParseTreeListener):
                 mem_reservations = int(str(ctx.CONST_I())) - 1
                 var.arraySize = mem_reservations + 1
 
-                for _ in range(mem_reservations):
+                for _ in range(mem_reservations - 1):
                     reserved_address = self.memHandler.reserve(
                         context=tokenizeContext(self.ctxWrapper.top()),
                         dtype=dtype
@@ -818,11 +818,19 @@ class PopurriListener(ParseTreeListener):
                 if (type(attr) != dict  # check if it's a method varTable
                         and attr.access_type != PRIVATE):
                     self.ctxWrapper.addVariable(attr, class_id)
+                    self.memHandler.reserve(
+                        context=LOCAL,
+                        dtype=attr.type
+                    )
 
             # Inherit functions
             for func in self.ctxWrapper.functions[parent_id].values():
                 if func.access_type != PRIVATE:
                     self.ctxWrapper.addFunction(func, class_id)
+                    # Inherit varTable
+                    method_vars = self.ctxWrapper.variables[parent_id].get('func ' + func.id, None)
+                    if method_vars:
+                        self.ctxWrapper.variables[class_id]['func ' + func.id] = method_vars # FIXME ??
 
         # Parse class attributes
         for declarations in ctx.attributes():

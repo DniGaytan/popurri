@@ -27,35 +27,35 @@ def bailaMijaConElSeñor(baile, mija=None, sr=None):
 bailes = {
     #### boolOp ####
     ANDOP: {
-        ("bool", "bool"): "bool"
+        (BOOL, BOOL): BOOL
     },
     OROP: {
-        ("bool", "bool"): "bool"
+        (BOOL, BOOL): BOOL
     },
     #### cmpOp ####
     LESSER: {
-        ("int", "int"): "bool",
-        ("int", "float"): "bool",
-        ("float", "int"): "bool",
-        ("float", "float"): "bool"
+        (INT, INT): BOOL,
+        (INT, FLOAT): BOOL,
+        (FLOAT, INT): BOOL,
+        (FLOAT, FLOAT): BOOL
     },
     LESSEREQ: {
-        ("int", "int"): "bool",
-        ("int", "float"): "bool",
-        ("float", "int"): "bool",
-        ("float", "float"): "bool"
+        (INT, INT): BOOL,
+        (INT, FLOAT): BOOL,
+        (FLOAT, INT): BOOL,
+        (FLOAT, FLOAT): BOOL
     },
     GREATER: {
-        ("int", "int"): "bool",
-        ("int", "float"): "bool",
-        ("float", "int"): "bool",
-        ("float", "float"): "bool"
+        (INT, INT): BOOL,
+        (INT, FLOAT): BOOL,
+        (FLOAT, INT): BOOL,
+        (FLOAT, FLOAT): BOOL
     },
     GREATEREQ: {
-        ("int", "int"): "bool",
-        ("int", "float"): "bool",
-        ("float", "int"): "bool",
-        ("float", "float"): "bool"
+        (INT, INT): BOOL,
+        (INT, FLOAT): BOOL,
+        (FLOAT, INT): BOOL,
+        (FLOAT, FLOAT): BOOL
     },
     EQUAL: {
         # Any
@@ -65,81 +65,81 @@ bailes = {
     },
     #### addOp ####
     ADD: {
-        ("int", "int"): "int",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float",
+        (INT, INT): INT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT,
         # "a" + "bc" = "abc"
-        ("string", "string"): "string",
+        (STRING, STRING): STRING,
         # +10
-        (None, "int"): "int",
+        (NONE, INT): INT,
         # +3.14
-        (None, "float"): "float"
+        (NONE, FLOAT): FLOAT
     },
     MINUS: {
-        ("int", "int"): "int",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float",
+        (INT, INT): INT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT,
     },
     #### multDivOp ####
     MULT: {
-        ("int", "int"): "int",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float",
+        (INT, INT): INT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT,
         # "a" * 3 = "aaa"
-        ("string", "int"): "string",
-        ("int", "string"): "string"
+        (STRING, INT): STRING,
+        (INT, STRING): STRING
     },
     DIV: {
         # 3 / 10 = 0.33333
-        ("int", "int"): "float",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float"
+        (INT, INT): FLOAT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT
     },
     MOD: {
-        ("int", "int"): "int",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float"
+        (INT, INT): INT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT
     },
     #### assignOp ####
     ASSIGN: {
-        ("int", "int"): "int",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float"
+        (INT, INT): INT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT
     },
     #### expOp ####
     POWER: {
-        ("int", "int"): "int",
-        ("int", "float"): "float",
-        ("float", "int"): "float",
-        ("float", "float"): "float"
+        (INT, INT): INT,
+        (INT, FLOAT): FLOAT,
+        (FLOAT, INT): FLOAT,
+        (FLOAT, FLOAT): FLOAT
     },
     #### unaryAddOp ####
     UNARYADD: {
         # +10
-        ("None", "int"): "int",
+        (NONE, INT): INT,
         # +3.14
-        ("None", "float"): "float"
+        (NONE, FLOAT): FLOAT
     },
     UNARYMINUS: {
         # -10
-        ("None", "int"): "int",
+        (NONE, INT): INT,
         # -3.14
-        ("None", "float"): "float"
+        (NONE, FLOAT): FLOAT
     }
 }
 
 # Append all combinations to "is" and "is not" operators
-types = ['int', 'float', 'string', 'bool']
+types = [INT, FLOAT, STRING, BOOL]
 for op in [EQUAL, NOTEQUAL]:
     for left in types:
         for right in types:
-            bailes[op][(left, right)] = "bool"
+            bailes[op][(left, right)] = BOOL
 
 
 # TYPE      :  'int' | 'float' | 'string' | 'bool' | '[float]' | '[int]' | '[bool]'

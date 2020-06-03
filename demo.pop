@@ -1,0 +1,55 @@
+module demo
+
+# Class Declarations
+class Parent {
+    var name : string
+    protected var parent_name : string
+    private var ssn : string
+
+    func initParent(string name, string ssn, string parent_name) {
+        self.name = name
+        self.ssn = ssn
+        self.parent_name = parent_name
+    }
+
+    func printParentAttrs() {
+        print('name:', self.name, '\n')
+        print('ssn:', self.ssn, '\n')
+        print('parent_name:', self.parent_name, '\n')
+    }
+}
+
+class Parent -> Child {
+    var age : int
+    var toys : [string] [3]
+
+    func initChild(string name, string ssn, string parent_name, # For Parent init
+                   int age) {
+        self.initParent(name, ssn, parent_name)
+        self.age = age
+    }
+
+    func printChildAttrs() {
+        println('-------parent-------')
+        self.printParentAttrs()
+        print('age:', self.age, '\n')
+        for i in self.toys {
+            print(self.toys[i])
+        }
+    }
+}
+
+# Globals
+var p : Parent, c : Child, tmp : string
+
+# Functions
+
+# Main
+p.initParent("Diego", "1234567890", "?")
+p.printParentAttrs()
+c.initChild("Hijo", "n/a", p.name, 10)
+for i in c.toys {
+    input(tmp)
+    c.toys[i] = tmp
+}
+c.printChildAttrs()

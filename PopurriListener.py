@@ -4,6 +4,7 @@ from popurri_tokens import *
 from error_tokens import *
 from semantic_cube import bailaMijaConElSeñor
 from memory import MemoryHandler
+from ast import literal_eval
 from copy import deepcopy
 import jsbeautifier as js
 import json
@@ -275,18 +276,22 @@ class ContextWrapper():
         if a match exists, returns the var object
         otherwise exits loop and return None
         '''
-        for ctx in self.variables.values():  # Iterate over contexts
-            for var in ctx.values():
-                if type(var) == dict:  # Inside function varTable
-                    for var in var.values():
-                        if type(var) == dict:  # Var is object, iterate over attributes
-                            for attr in var.values():
-                                if address == attr.address:
-                                    return attr
-                        elif address == var.address:
-                            return var
-                elif address == var.address:
-                    return var
+        if self.insideClass():
+            variables = self.variables[self.getClassContext()]
+        else:
+            variables = self.variables[self.top()]
+
+        for var in variables.values():
+            if type(var) == dict:  # Inside function varTable
+                for var in var.values():
+                    if type(var) == dict:  # Var is object, iterate over attributes
+                        for attr in var.values():
+                            if address == attr.address:
+                                return attr
+                    elif address == var.address:
+                        return var
+            elif address == var.address:
+                return var
         return None
 
     def getVariable(self, var_id, context="global", insideClass=False):
@@ -665,7 +670,7 @@ class PopurriListener(ParseTreeListener):
                     dtype=attr.type
                 )
                 if attr.isArray():  # Allocate slots
-                    for _ in range(attr.arraySize):
+                    for _ in range(attr.arraySize - 1):
                         self.memHandler.reserve(
                             context=tokenizeContext(self.ctxWrapper.top()),
                             dtype=attr.type
@@ -818,11 +823,19 @@ class PopurriListener(ParseTreeListener):
                 if (type(attr) != dict  # check if it's a method varTable
                         and attr.access_type != PRIVATE):
                     self.ctxWrapper.addVariable(attr, class_id)
+                    self.memHandler.reserve(
+                        context=LOCAL,
+                        dtype=attr.type
+                    )
 
             # Inherit functions
             for func in self.ctxWrapper.functions[parent_id].values():
                 if func.access_type != PRIVATE:
                     self.ctxWrapper.addFunction(func, class_id)
+                    # Inherit varTable
+                    method_vars = self.ctxWrapper.variables[parent_id].get('func ' + func.id, None)
+                    if method_vars:
+                        self.ctxWrapper.variables[class_id]['func ' + func.id] = method_vars # FIXME ??
 
         # Parse class attributes
         for declarations in ctx.attributes():
@@ -852,7 +865,7 @@ class PopurriListener(ParseTreeListener):
                     var.arraySize = mem_reservations + 1
 
                     # First address is already reserved
-                    for _ in range(mem_reservations - 1):
+                    for _ in range(mem_reservations):
                         reserved_address = self.memHandler.reserve(
                             context=tokenizeContext(self.ctxWrapper.top()),
                             dtype=tokenize(attr.TYPE())
@@ -1356,7 +1369,7 @@ class PopurriListener(ParseTreeListener):
             value = float(str(ctx.CONST_F()))
             self.quadWrapper.insertType(FLOAT)
         elif ctx.CONST_STR() is not None:
-            value = str(ctx.CONST_STR())[1:-1]
+            value = literal_eval(str(ctx.CONST_STR()))
             self.quadWrapper.insertType(STRING)
         else:
             self.quadWrapper.insertType(NONE)

@@ -56,6 +56,9 @@ class QuadWrapper():
     def topJump(self):
         return self.jump_stack[-1] if len(self.jump_stack) > 0 else None
 
+    def topAddress(self):
+        return self.address_stack[-1] if len(self.address_stack) > 0 else None
+
     def popOperator(self):
         if len(self.operator_stack) == 0 or self.topOperator() == FALSEBOTTOM:
             return None
@@ -157,8 +160,8 @@ class ContextWrapper():
         self.context_stack = ['global']
         self.loop_stack = []
 
-    def pushLoop(self):
-        return self.loop_stack.append(True)
+    def pushLoop(self, loop=True):
+        return self.loop_stack.append(loop)
 
     def popLoop(self):
         return self.loop_stack.pop()
@@ -325,14 +328,13 @@ class Variable():
     [value] es el valor inicial que tendra la variable. Ej. var edad = 25. Donde 25 es el valor inicial.
     '''
 
-    def __init__(self, id, access_type="public", type=None, address=None, paramNo=None, arraySize=None, steps=None):
+    def __init__(self, id, access_type="public", type=None, address=None, paramNo=None, arraySize=None):
         self.access_type = str(access_type)
         self.id = str(id)
         self.type = str(type)
         self.address = address
         self.paramNo = paramNo
         self.arraySize = arraySize
-        self.steps = steps
 
     def isArray(self):
         return self.arraySize != None
@@ -386,7 +388,6 @@ class PopurriListener(ParseTreeListener):
         # a[ array_indexation_exp ]
         self.array_active = False
         self.debug_info = debug_info
-        self.for_loop_iter_var = None
         # (iter, array)
         self.for_loop_stack = []
         self.if_for = False
@@ -814,40 +815,48 @@ class PopurriListener(ParseTreeListener):
             at=self.quadWrapper.quads_ptr - 1
         )
 
+    def enterIterable(self, ctx):
+        if ctx.ID() is not None:
+            self.validateCalledIds(ctx)
+            iterable_addr = self.quadWrapper.topAddress()
+            iterable = self.ctxWrapper.getVariableByAddress(iterable_addr)
+            self.ctxWrapper.pushLoop(iterable)
+
     def enterForLoop(self, ctx):
-        var_id = str(ctx.ID())
-        if self.ctxWrapper.varExistsInContext(var_id, ctx=self.ctxWrapper.top()):
-            raise error(ctx, VAR_REDEFINITION.format(var_id))
-
-        # Creates variable prototype for the current forloop iter id
-        self.for_loop_iter_var = Variable(
-            id=var_id,
-            type=INT,
-            steps=1
+        # Add iterator to global varTable
+        iterator = Variable(
+            id=str(ctx.ID()),
+            type=stringifyToken(INT)
         )
+        iterator.address = self.memHandler.reserve(
+            context=TEMPORAL,
+            dtype=INT
+        )
+        self.ctxWrapper.addVariable(
+            iterator,
+            context=self.ctxWrapper.top(),
+            insideClass=self.ctxWrapper.insideClass()
+        )
+        self.ctxWrapper.pushLoop(iterator)
 
-        # self.ctxWrapper.addVariable(self.for_loop_iter_var)
-
-        # insert the jump pointing the first for-loop body quad
+        # Gonna later fill GOTOV with loop start
         self.quadWrapper.insertJump()
-        pass
 
     def exitForLoop(self, ctx):
-
-        iter, iterable = self.for_loop_stack.pop()
+        iterable = self.ctxWrapper.popLoop()
+        iter = self.ctxWrapper.popLoop()
 
         # reserve memory for array index
         index_array = self.memHandler.reserve(
             context=TEMPORAL,
             dtype=INT,
-            value=0)
-
-        # [quad] check if the iter is lesser than the Upper limit of the array
-        # self.limits.end (?)
+            value=0
+        )
 
         tmp = self.memHandler.reserve(
             context=TEMPORAL,
-            dtype=BOOL)
+            dtype=BOOL
+        )
 
         size_constant = self.memHandler.reserve(
             context=CONSTANT,
@@ -873,7 +882,7 @@ class PopurriListener(ParseTreeListener):
         iter_steps = self.memHandler.reserve(
             context=CONSTANT,
             dtype=INT,
-            value=iter.steps)
+            value=1)
 
         tmp = self.memHandler.reserve(
             context=TEMPORAL,
@@ -1400,49 +1409,6 @@ class PopurriListener(ParseTreeListener):
         pass
 
     def exitConst_arr(self, ctx):
-        pass
-
-    def enterIterable(self, ctx):
-        if ctx.ID() is not None:
-            returned_ids = self.validateCalledIds(ctx)
-            if type(returned_ids) is int:
-
-                array_var = self.ctxWrapper.getVariableByAddress(returned_ids)
-                self.for_loop_iter_var.type = stringifyToken(INT)
-
-                self.for_loop_iter_var.address = self.memHandler.reserve(
-                    context=TEMPORAL,
-                    dtype=tokenize(self.for_loop_iter_var.type)
-                )
-
-                self.ctxWrapper.addVariable(
-                    self.for_loop_iter_var,
-                    context=self.ctxWrapper.top(),
-                    insideClass=self.ctxWrapper.insideClass()
-                )
-
-                self.for_loop_stack.append((self.for_loop_iter_var, array_var))
-            else:
-                array_var = self.ctxWrapper.getVariable(
-                    str(ctx.ID()[1]))[str(ctx.ID()[1])]
-                self.for_loop_iter_var.type = stringifyToken(INT)
-
-                self.for_loop_iter_var.address = self.memHandler.reserve(
-                    context=TEMPORAL,
-                    dtype=tokenize(self.for_loop_iter_var.type)
-                )
-
-                self.ctxWrapper.addVariable(
-                    self.for_loop_iter_var,
-                    context=self.ctxWrapper.top(),
-                    insideClass=self.ctxWrapper.insideClass()
-                )
-
-                self.for_loop_stack.append((self.for_loop_iter_var, array_var))
-                # aqui va todo lo que no sea ID en iterable
-                pass
-
-    def exitIterable(self, ctx):
         pass
 
     def handlePrint(self, PRINT_OP):

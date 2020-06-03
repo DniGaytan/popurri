@@ -6,6 +6,7 @@ func factorial(int n) int {
     var res = 1, i = 1
 
     while i <= n {
+        print(res)
         res *= i
         i += 1
     }
@@ -13,5 +14,6 @@ func factorial(int n) int {
     return res
 }
 
+print('n:')
 input(n)
-print(factorial(n))
+factorial(n)

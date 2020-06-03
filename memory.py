@@ -5,6 +5,11 @@ import math
 
 
 class MemoryHandler():
+    '''
+    This class is used to simulate a memory with virtual addresses,
+    it hosts four contexts (GLOBAL, LOCAL, TEMPORAL, CONSTANT), which
+    all allocate 2000 spaces (by default) for each data type (INT, FLOAT, BOOL, STRING, POINTER).
+    '''
     snapshot = None
     context_offset = None
     type_offset = None
@@ -25,7 +30,7 @@ class MemoryHandler():
 
         self.contexts = {}
         for i, ctx in enumerate([GLOBAL, LOCAL, TEMPORAL, CONSTANT]):
-            self.contexts[ctx] = Memory(
+            self.contexts[ctx] = MemoryContext(
                 start=context_offset * i, max_size=self.type_offset)
 
     def reserve(self, context, dtype, value=None):
@@ -44,10 +49,7 @@ class MemoryHandler():
         return ctxMemory.start + reserved_address + (self.type_offset * dtype)
 
     def update(self, address, value):
-        '''
-        Updates a particular mem stack size/value
-        this functions should be used only by PopurriListener.py
-        '''
+        'Updates the given virtual address with the specified value'
 
         address, context = self.getContextAddress(address)
         dtype = self.getAddressType(address)
@@ -65,8 +67,8 @@ class MemoryHandler():
 
     def getContextAddress(self, address):
         '''
-        given the address return the address without offset (GLOBAL, LOCAL, TEMPORAL or CONSTANT)
-        and its respective context.
+        Returns address without context offset (i.e. 0 -> 9999)
+        and its respective context (GLOBAL, LOCAL, TEMPORAL or CONSTANT).
         '''
 
         for i, ctx in enumerate([GLOBAL, LOCAL, TEMPORAL, CONSTANT]):
@@ -78,10 +80,11 @@ class MemoryHandler():
         return (None, None)
 
     def getAddressType(self, address):
-        'obtains the data type from address [INT, FLOAT, BOOL, STRING]'
+        'obtains the data type from address [INT, FLOAT, BOOL, STRING, POINTER]'
         return math.floor(address / self.type_offset % 5) + INT
 
     def getValue(self, address):
+        'Obtains the value stored in the given virtual address'
         address, context = self.getContextAddress(address)
         dtype = self.getAddressType(address)
         address -= ((dtype - INT) * self.type_offset)
@@ -89,23 +92,30 @@ class MemoryHandler():
         return self.contexts[context].getValue(address, dtype)
 
     def saveSnapshot(self, context=LOCAL):
+        'Saves a copy of all the memory sections in the given context'
         self.snapshot = deepcopy(self.contexts[context])
 
     def restoreSnapshot(self, context=LOCAL):
+        'Restores a (previously saved) copy of the memory sections into the given context'
         self.contexts[context] = deepcopy(self.snapshot)
 
     def flush(self, context=LOCAL):
+        'Deletes all memory for the specified context'
         start_offset = context - GLOBAL
-        self.contexts[context] = Memory(
+        self.contexts[context] = MemoryContext(
             start=self.context_offset * start_offset, max_size=self.type_offset)
 
     def count(self, context=LOCAL):
-        'Returns a tuple with the amount of items allocated in each section'
+        'Returns a tuple with the amount of items allocated in each memory section'
         memCtx = self.contexts[context].sections
         return tuple([len(v) for v in memCtx.values()])
 
 
-class Memory():
+class MemoryContext():
+    '''
+    This class is intended to be used by MemoryHandler, it's used to allocate.
+    the 5 default data types in Popurri
+    '''
     default_val_map = {
         INT: 0,
         FLOAT: 0.0,
@@ -115,6 +125,11 @@ class Memory():
     }
 
     def __init__(self, start, max_size):
+        '''
+        Initiates the empty MemoryContext object, it accepts two parameters:
+            - start: starting memory address for this Memory context
+            - max_size: limit of elements a given type section can allocate
+        '''
         self.start = start
         self.sections = {
             INT: [],
@@ -123,13 +138,7 @@ class Memory():
             STRING: [],
             POINTER: []
         }
-        self.allocations = {
-            INT: 0,
-            FLOAT: 0,
-            BOOL: 0,
-            STRING: 0,
-            POINTER: 0
-        }
+        self.allocations = { k:0 for k,v in self.sections.items() }
         self.max_size = max_size
 
     def reserveAddress(self, dtype):
@@ -145,21 +154,13 @@ class Memory():
         self.allocations[dtype] += 1
         return len(self.sections[dtype]) - 1
 
-    def updateAddress(self, address, dtype=None, value=None):
-        '''
-        address is the index after offset. Ej. Address:5024 -> 24.
-        dtype is the on of the possible data types used by popurri
-        value is the actual value to be recorded in the current address 
-        '''
+    def updateAddress(self, address, dtype, value=None):
+        'Updates the localized address (i.e. without context offset) with the specified value.'
         if value is None:
             return
 
         self.sections[dtype][address] = value
 
     def getValue(self, address, dtype):
-        '''
-        list_address is the index after offset. Ej. Address:5024 -> 24.
-        dtype is the on of the possible data types used by popurri
-        '''
-
+        'Returns the value stored in the localized address'
         return self.sections[dtype][address]

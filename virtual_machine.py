@@ -34,14 +34,14 @@ def importContext(f):
                                 attrdict['type'] = NONE
                             vdict[attrid] = Variable(**attrdict)
                             if 'self' == attrid:
-                                attrdict['type'] = class_id
+                                vdict[attrid].type = class_id
                     else:
                         if 'self' == vid:
                             class_id = vdict['type']
                             vdict['type'] = NONE
                         v[vid] = Variable(**vdict)
                         if 'self' == vid:
-                            vdict['type'] = class_id
+                            v[vid].type = class_id
             else:
                 ctx[k] = Variable(**v)
 

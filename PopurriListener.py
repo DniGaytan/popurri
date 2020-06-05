@@ -699,6 +699,12 @@ class PopurriListener(ParseTreeListener):
         # Var type will be declared implicitly via assignment
         elif ctx.assignment() is not None:
             var = Variable(id=ctx.ID(0))
+        elif ctx.arrayAssignment() is not None:
+            var = Variable(id=ctx.ID(0))
+
+            if ctx.CONST_I() is not None:
+                mem_reservations = int(str(ctx.CONST_I())) - 1
+                var.arraySize = mem_reservations + 1
         else:
             raise error(ctx, MUST_DECLARE_VAR_TYPE.format(str(ctx.ID(0))))
 
@@ -1625,9 +1631,35 @@ class PopurriListener(ParseTreeListener):
             assign_addr_stack.append(self.quadWrapper.popAddress())
             self.quadWrapper.popType()
         assign_addr_stack = assign_addr_stack[::-1]
+
         array_base_addr = self.quadWrapper.popAddress()
 
-        array_type = self.quadWrapper.popType()
+        if type(array_base_addr) is not int:
+            # give assign_addr_stack type to var
+
+            array_base_var = self.ctxWrapper.getVariable(
+                var_id=array_base_addr,
+                context=self.ctxWrapper.top()
+            )
+            array_base_var.type = self.memHandler.getAddressType(
+                assign_addr_stack[0])
+
+            assigned_addr = self.memHandler.reserve(
+                context=tokenizeContext(self.ctxWrapper.top()),
+                dtype=array_base_var.type
+            )
+
+            for _ in range(array_base_var.arraySize):
+                reserved_address = self.memHandler.reserve(
+                    context=tokenizeContext(self.ctxWrapper.top()),
+                    dtype=array_base_var.type
+                )
+
+            array_base_var.address = assigned_addr
+            array_base_addr = assigned_addr
+            array_type = array_base_var.type
+        else:
+            array_type = self.quadWrapper.popType()
 
         for i, addr in enumerate(assign_addr_stack):
             addr_type = self.memHandler.getAddressType(addr)

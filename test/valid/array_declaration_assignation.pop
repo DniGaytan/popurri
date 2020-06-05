@@ -1,6 +1,6 @@
 module arrays
 
-var arr: [int] [5] = [0, 1, 2 ,3 ,4]
+var arr: [5] = [0, "HOLA", 2 ,3 ,4]
 
 for i in arr {
     print(arr[i])

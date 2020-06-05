@@ -1,0 +1,7 @@
+module arrays
+
+var arr : [int] [5]
+
+input(arr[1])
+
+print(arr[1])

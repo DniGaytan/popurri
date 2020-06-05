@@ -174,6 +174,12 @@ def run(obj_file):
         # Special Functions
         elif op == INPUT:
             res_type = memHandler.getAddressType(res)
+
+            if type(res) == int and res >= 28000 and res <= 30000:
+                res_type = memHandler.getAddressType(res)
+                if res_type == POINTER:
+                    res = memHandler.getValue(res)
+                    res_type = memHandler.getAddressType(res)
             tmp = input()
             try:
                 if res_type == INT:

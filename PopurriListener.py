@@ -530,6 +530,7 @@ class PopurriListener(ParseTreeListener):
         self.func_count = -1
         self.func_returned_val = False
         self.debug_info = debug_info
+        self.indexation_in_input = False
 
     def enterProgram(self, ctx):
         '''
@@ -1775,12 +1776,24 @@ class PopurriListener(ParseTreeListener):
         [InputStmt] this is the first part of InputStmt
         '''
         self.validateCalledIds(ctx)
-        self.quadWrapper.insertQuad(Quadruple(
-            op=INPUT,
-            res=self.quadWrapper.popAddress()
-        ))
+
+        if ctx.indexation():
+            self.indexation_in_input = True
+        else:
+            self.quadWrapper.insertQuad(Quadruple(
+                op=INPUT,
+                res=self.quadWrapper.popAddress()
+            ))
 
     def exitInputStmt(self, ctx):
+        if self.indexation_in_input:
+            self.quadWrapper.insertQuad(Quadruple(
+                op=INPUT,
+                res=self.quadWrapper.popAddress()
+            ))
+            # Reset flag
+            self.indexation_in_input = False
+
         pass
 
     def enterCondParam(self, ctx):

@@ -88,8 +88,7 @@ constant:
 	| CONST_I
 	| CONST_F
 	| CONST_STR
-	| const_arr
-	;
+	| const_arr;
 
 const_arr: '[' condParam ']';
 iterable: (ID '.')? ID;
@@ -98,7 +97,7 @@ iterable: (ID '.')? ID;
 printStmt: 'print' '(' condParam? ')';
 printlnStmt: 'println' '(' condParam? ')';
 
-inputStmt: 'input' '(' (ID '.')? ID ')';
+inputStmt: 'input' '(' (ID '.')? ID indexation? ')';
 
 // Parameters
 condParam: cond (',' cond)*;

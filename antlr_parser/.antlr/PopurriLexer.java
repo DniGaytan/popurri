@@ -1,4 +1,4 @@
-// Generated from /Users/diegotf/Documents/popurri/antlr_parser/Popurri.g4 by ANTLR 4.7.1
+// Generated from /mnt/c/Users/danya/Documents/Universidad/8 semestre/Diseño de compiladores/compilador-save/ProyectoFinal-popurrí-A00819313-A00819362/popurri/antlr_parser/Popurri.g4 by ANTLR 4.7.1
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.Token;

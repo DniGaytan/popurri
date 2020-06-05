@@ -5,6 +5,7 @@ class myClass {
 }
 
 var obj : myClass, tmp : int
+var arr : [int] [5] 
 
 for i in obj.array {
     print('Input value #', i + 1, ':')

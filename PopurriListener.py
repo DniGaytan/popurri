@@ -359,7 +359,8 @@ class ContextWrapper():
 
     def addVariable(self, var, context="global", insideClass=False):
         'Adds the variable object to the corresponding context'
-        variables = self.variables[self.getClassContext()] if insideClass else self.variables
+        variables = self.variables[self.getClassContext(
+        )] if insideClass else self.variables
 
         if context in variables:
             variables[context][var.id] = var
@@ -833,9 +834,12 @@ class PopurriListener(ParseTreeListener):
                 if func.access_type != PRIVATE:
                     self.ctxWrapper.addFunction(func, class_id)
                     # Inherit varTable
-                    method_vars = self.ctxWrapper.variables[parent_id].get('func ' + func.id, None)
+                    method_vars = self.ctxWrapper.variables[parent_id].get(
+                        'func ' + func.id, None)
                     if method_vars:
-                        self.ctxWrapper.variables[class_id]['func ' + func.id] = method_vars # FIXME ??
+                        # FIXME ??
+                        self.ctxWrapper.variables[class_id]['func ' +
+                                                            func.id] = method_vars
 
         # Parse class attributes
         for declarations in ctx.attributes():
@@ -1089,7 +1093,7 @@ class PopurriListener(ParseTreeListener):
             context=TEMPORAL,
             dtype=BOOL
         )
-
+        print(iterable.arraySize - 1, 'ARRAY SIZE')
         size_constant = self.memHandler.reserve(
             context=CONSTANT,
             dtype=INT,
@@ -1123,7 +1127,7 @@ class PopurriListener(ParseTreeListener):
         self.quadWrapper.insertQuad(
             Quadruple(
                 op=ADD,
-                l=iter_steps,  # placeholder
+                l=iter_steps,
                 r=index_array,
                 res=tmp)
         )
@@ -1153,10 +1157,12 @@ class PopurriListener(ParseTreeListener):
             )
         )
 
+        # Replaced tmp with index_array
+        # DO NOT ERASE tmp
         self.quadWrapper.insertQuad(
             Quadruple(
                 op=ASSIGN,
-                l=tmp,  # placeholder
+                l=index_array,  # placeholder
                 res=iter.address
             )
         )
@@ -1356,7 +1362,7 @@ class PopurriListener(ParseTreeListener):
     def getConstant(self, ctx):
         '''
         Helper to stringify "constant" rule
-        
+
         Also pushes the constant's type & allocates it
         '''
         if ctx.CONST_BOOL() is not None:

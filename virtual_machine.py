@@ -85,6 +85,7 @@ def handleBinaryOperation(memHandler, op, l_val, r_val, res):
     opFunc = opMap[op]
     memHandler.update(res, opFunc(l_val, r_val))
 
+
 def handleUnaryOperation(memHandler, op, r_val, res):
     'applies the unary operator function specified by opMap and stores it in the result address'
     opFunc = opMap[op]
@@ -188,7 +189,7 @@ def run(obj_file):
 
             memHandler.update(res, tmp)
         elif op == PRINT or op == PRINTLN:
-            if res >= 28000 and res <= 30000: # POINTER
+            if res >= 28000 and res <= 30000:  # POINTER
                 res = memHandler.getValue(res)
             print(memHandler.getValue(res), end=' ' if op == PRINT else '\n')
 
@@ -224,7 +225,7 @@ def run(obj_file):
                     dtype=attr.type,
                     value=attr_val
                 )
-                if attr.isArray(): # Allocate array slots
+                if attr.isArray():  # Allocate array slots
                     for i in range(attr.arraySize):
                         slot_val = memHandler.getValue(attr.address + i)
                         func_mem.reserve(
@@ -327,21 +328,22 @@ def run(obj_file):
             if ctx.insideClass():
                 class_var = ctx.getAttributes(ctx.getClassContext())
 
-                if len(ctx.context_stack) > 3: # Inside nested call
+                if len(ctx.context_stack) > 3:  # Inside nested call
                     for attr in class_var.values():
                         if attr.id == 'self':  # this attribute only contains the class name
                             continue
 
-                        # Pass attribute value to returning context 
+                        # Pass attribute value to returning context
                         updated_val = memHandler.getValue(attr.address)
                         prev_ctx.update(
-                            attr.address, # Since we're returning to another local context, address will be the same
+                            attr.address,  # Since we're returning to another local context, address will be the same
                             updated_val
                         )
                         # If attribute is an array, pass over the rest of its values as well
                         if attr.isArray():
                             for i in range(1, attr.arraySize):
-                                updated_val = memHandler.getValue(attr.address + i)
+                                updated_val = memHandler.getValue(
+                                    attr.address + i)
                                 prev_ctx.update(attr.address + i, updated_val)
                 else:  # Passing attributes to global context
                     obj_var = ctx.getVariable(original_method_caller)
@@ -349,7 +351,7 @@ def run(obj_file):
                         if attr.id == 'self':  # this attribute only contains the class name
                             continue
 
-                        # Pass attribute value to returning context 
+                        # Pass attribute value to returning context
                         updated_val = memHandler.getValue(attr.address)
                         prev_ctx.update(
                             obj_var[attr.id].address,
@@ -358,8 +360,10 @@ def run(obj_file):
                         # If attribute is an array, pass over the rest of its values as well
                         if attr.isArray():
                             for i in range(1, attr.arraySize):
-                                updated_val = memHandler.getValue(attr.address + i)
-                                prev_ctx.update(obj_var[attr.id].address + i, updated_val)
+                                updated_val = memHandler.getValue(
+                                    attr.address + i)
+                                prev_ctx.update(
+                                    obj_var[attr.id].address + i, updated_val)
 
             # Return to previous context
             ip = ip_stack.pop()
@@ -392,7 +396,6 @@ def run(obj_file):
             index = l_val
             lInf = r_val
             lSup = memHandler.getValue(res)
-            print(lInf, index, lSup)
 
             if index < lInf or index > lSup:
                 raise Exception(OUT_OF_RANGE.format(index))

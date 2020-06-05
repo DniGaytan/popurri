@@ -22,7 +22,10 @@ declarations: 'var' declaration (',' declaration)*;
 //solamente he encontrado esta solucion al momento. Meter el parseo del arreglo en declaration, lo
 // demas, por alguna razon, ignoraba el '['
 declaration:
-	ID (':' (TYPE | ID | '[' TYPE ']' '[' CONST_I ']'))? assignment?;
+	ID (':' (TYPE | ID | '[' TYPE ']' '[' CONST_I ']'))? (
+		arrayAssignment
+		| assignment
+	)?;
 
 function:
 	'func' ID '(' funcParams? ')' TYPE? '{' declarations* statement* '}';
@@ -81,6 +84,7 @@ expOp: '**';
 assignOp: '=' | '+=' | '-=' | '*=' | '/=' | '%=';
 
 assignment: assignOp cond;
+arrayAssignment: assignOp '[' cond (',' cond)* ']';
 funcCall: (ID '.')? ID '(' condParam? ')';
 
 constant:

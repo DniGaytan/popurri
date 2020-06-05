@@ -314,6 +314,15 @@ class PopurriListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by PopurriParser#arrayAssignment.
+    def enterArrayAssignment(self, ctx:PopurriParser.ArrayAssignmentContext):
+        pass
+
+    # Exit a parse tree produced by PopurriParser#arrayAssignment.
+    def exitArrayAssignment(self, ctx:PopurriParser.ArrayAssignmentContext):
+        pass
+
+
     # Enter a parse tree produced by PopurriParser#funcCall.
     def enterFuncCall(self, ctx:PopurriParser.FuncCallContext):
         pass

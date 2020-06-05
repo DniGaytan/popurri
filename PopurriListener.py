@@ -702,7 +702,7 @@ class PopurriListener(ParseTreeListener):
         else:
             raise error(ctx, MUST_DECLARE_VAR_TYPE.format(str(ctx.ID(0))))
 
-        if ctx.assignment() is not None:
+        if ctx.assignment() is not None or ctx.arrayAssignment():
             if var.address is not None:
                 self.quadWrapper.insertAddress(var.address)
             else:
@@ -1612,6 +1612,37 @@ class PopurriListener(ParseTreeListener):
                 res=var.address if var is not None else var_address
             ))
 
+    def enterArrayAssignment(self, ctx):
+        pass
+
+    def exitArrayAssignment(self, ctx):
+
+        assign_addr_stack = []
+
+        array_base_addr = None
+
+        for _ in ctx.cond():
+            assign_addr_stack.append(self.quadWrapper.popAddress())
+            self.quadWrapper.popType()
+        assign_addr_stack = assign_addr_stack[::-1]
+        array_base_addr = self.quadWrapper.popAddress()
+
+        array_type = self.quadWrapper.popType()
+
+        for i, addr in enumerate(assign_addr_stack):
+            addr_type = self.memHandler.getAddressType(addr)
+            self.quadWrapper.insertType(array_type)
+            self.quadWrapper.insertType(addr_type)
+            # Complete
+            self.quadWrapper.validateTypes(ctx)
+            assign_quad = Quadruple(
+                op=self.quadWrapper.topOperator(),
+                l=addr,
+                res=array_base_addr + i)
+            self.quadWrapper.insertQuad(assign_quad)
+
+        self.quadWrapper.popOperator()
+
     def enterFuncCall(self, ctx):
         '''
         Validates IDs being called (e.g. self.method(), obj.method() or myFunc())
@@ -1793,8 +1824,6 @@ class PopurriListener(ParseTreeListener):
             ))
             # Reset flag
             self.indexation_in_input = False
-
-        pass
 
     def enterCondParam(self, ctx):
         pass

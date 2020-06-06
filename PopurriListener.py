@@ -872,8 +872,7 @@ class PopurriListener(ParseTreeListener):
 
             for attr in declarations.attribute():
                 # Raise error if re-declaration (ignore inherited methods)
-                if (self.ctxWrapper.varExistsInContext(attr.ID(), class_id)
-                        and not self.ctxWrapper.varExistsInContext(attr.ID(), parent_id)):
+                if self.ctxWrapper.varExistsInContext(attr.ID(), class_id):
                     raise error(ctx, VAR_REDEFINITION.format(attr.ID()))
 
                 reserved_address = self.memHandler.reserve(

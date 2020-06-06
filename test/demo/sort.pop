@@ -32,5 +32,5 @@ while(counter < limit){
 }
 
 for i in arr{
-    println(arr[i])
+    print(arr[i])
 }

@@ -1,0 +1,35 @@
+module classes
+
+class Person {
+    public var name : string
+    public var age : int
+    public var gender : string
+
+    func say(string message){
+        print(self.name, 'says :', message)
+        println(' ')
+    }
+
+    func setName(string name){
+        self.name = name
+    }
+
+    func getAge() int {
+        return self.age 
+    }
+
+    func setAge(int in_age) {
+        self.age = in_age
+    }
+}
+
+var fulanito : Person
+var age : int
+
+fulanito.setName('fulanito')
+fulanito.say('hey!')
+fulanito.setAge(25)
+age = fulanito.getAge()
+
+print('fulanitos age :',age)
+

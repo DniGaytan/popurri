@@ -60,6 +60,31 @@ def importContext(f):
 
     return ContextWrapper(variables=vars, functions=funcs)
 
+def copyAttributes(prev_ctx, ctx, memHandler, og_method_caller):
+    class_var = ctx.getAttributes(ctx.getClassContext())
+    obj_var = ctx.getVariable(og_method_caller)
+
+    for attr in class_var.values():
+        if attr.id == 'self':  # this attribute only contains the class name
+            continue
+
+        if len(ctx.context_stack) > 3:  # Inside nested call
+            # Since we're returning to another local context, address will be the same
+            addr = attr.address
+        else:  # Passing attributes to global context
+            addr = obj_var[attr.id].address
+
+        # Pass attribute value to returning context 
+        updated_val = memHandler.getValue(attr.address)
+        prev_ctx.update(
+            addr,
+            updated_val
+        )
+        # If attribute is an array, pass over the rest of its values as well
+        if attr.isArray():
+            for i in range(1, attr.arraySize):
+                updated_val = memHandler.getValue(attr.address + i)
+                prev_ctx.update(addr + i, updated_val)
 
 # Maps Popurri tokens to their respective python function
 opMap = {
@@ -233,7 +258,7 @@ def run(obj_file):
                     value=attr_val
                 )
                 if attr.isArray():  # Allocate array slots
-                    for i in range(attr.arraySize):
+                    for i in range(1, attr.arraySize):
                         slot_val = memHandler.getValue(attr.address + i)
                         func_mem.reserve(
                             context=LOCAL,
@@ -319,6 +344,10 @@ def run(obj_file):
             # And add it to global varTable
             ctx.addVariable(return_var)
 
+            # Copy over attributes (in case they were modified)
+            if ctx.insideClass():
+                copyAttributes(prev_ctx, ctx, memHandler, original_method_caller)
+
             # Return to previous context
             ip = ip_stack.pop()
             memHandler = prev_ctx
@@ -331,46 +360,9 @@ def run(obj_file):
 
         elif op == ENDPROC:
             prev_ctx = memCtxWrapper.pop()
-            # If inside class, copy over attributes (in case they were modified)
+            # Copy over attributes (in case they were modified)
             if ctx.insideClass():
-                class_var = ctx.getAttributes(ctx.getClassContext())
-
-                if len(ctx.context_stack) > 3:  # Inside nested call
-                    for attr in class_var.values():
-                        if attr.id == 'self':  # this attribute only contains the class name
-                            continue
-
-                        # Pass attribute value to returning context
-                        updated_val = memHandler.getValue(attr.address)
-                        prev_ctx.update(
-                            attr.address,  # Since we're returning to another local context, address will be the same
-                            updated_val
-                        )
-                        # If attribute is an array, pass over the rest of its values as well
-                        if attr.isArray():
-                            for i in range(1, attr.arraySize):
-                                updated_val = memHandler.getValue(
-                                    attr.address + i)
-                                prev_ctx.update(attr.address + i, updated_val)
-                else:  # Passing attributes to global context
-                    obj_var = ctx.getVariable(original_method_caller)
-                    for attr in class_var.values():
-                        if attr.id == 'self':  # this attribute only contains the class name
-                            continue
-
-                        # Pass attribute value to returning context
-                        updated_val = memHandler.getValue(attr.address)
-                        prev_ctx.update(
-                            obj_var[attr.id].address,
-                            updated_val
-                        )
-                        # If attribute is an array, pass over the rest of its values as well
-                        if attr.isArray():
-                            for i in range(1, attr.arraySize):
-                                updated_val = memHandler.getValue(
-                                    attr.address + i)
-                                prev_ctx.update(
-                                    obj_var[attr.id].address + i, updated_val)
+                copyAttributes(prev_ctx, ctx, memHandler, original_method_caller)
 
             # Return to previous context
             ip = ip_stack.pop()

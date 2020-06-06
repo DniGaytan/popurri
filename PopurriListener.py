@@ -199,7 +199,7 @@ class Quadruple():
 
     def __init__(self, op, l=None, r=None, res=None):
         self.op = op
-        # Arguments (In some cases one of both of them would be -1 indicating there is no value)
+        # Arguments (In some cases one of both of them would be None indicating there is no value)
         self.l = l
         self.r = r
         # Where result of op(l, r) is stored
@@ -301,8 +301,7 @@ class ContextWrapper():
         and in case of insideClass being true, the algorithm will filter all the variables
         that live within the class context
         '''
-        variables = self.variables[self.getClassContext(
-        )] if insideClass else self.variables
+        variables = self.variables[self.getClassContext()] if insideClass else self.variables
         if context not in variables:
             return None
 
@@ -375,10 +374,10 @@ class ContextWrapper():
         '''
         func_id = 'func ' + func.id
         if context in self.functions:
-            self.functions[context][func_id] = func
+            self.functions[context][func_id] = deepcopy(func)
         else:
             self.functions[context] = {
-                func_id: func
+                func_id: deepcopy(func)
             }
 
     def getVariableIfExists(self, var_id):
@@ -466,13 +465,14 @@ class Variable():
     [value] es el valor inicial que tendra la variable. Ej. var edad = 25. Donde 25 es el valor inicial.
     '''
 
-    def __init__(self, id, access_type=PUBLIC, type=NONE, address=None, paramNo=None, arraySize=None):
+    def __init__(self, id, access_type=PUBLIC, type=NONE, address=None, paramNo=None, arraySize=None, address_address=None):
         self.access_type = access_type
         self.id = str(id)
         self.type = tokenize(type)
         self.address = address
         self.paramNo = paramNo
         self.arraySize = arraySize
+        self.address_address = address_address
 
     def isArray(self):
         return self.arraySize != None
@@ -649,6 +649,12 @@ class PopurriListener(ParseTreeListener):
             if ctx.CONST_I() is not None:
                 mem_reservations = int(str(ctx.CONST_I())) - 1
                 var.arraySize = mem_reservations + 1
+                # Reserve memory for the literal address. Example: 5000 -> Int
+                var.address_address = self.memHandler.reserve(
+                    context=CONSTANT,
+                    dtype=INT,
+                    value=var.address
+                )
 
                 for _ in range(mem_reservations):
                     reserved_address = self.memHandler.reserve(
@@ -673,6 +679,12 @@ class PopurriListener(ParseTreeListener):
                     dtype=attr.type
                 )
                 if attr.isArray():  # Allocate slots
+                    # Reserve memory for the literal address. Example: 5000 -> Int
+                    attr.address_address = self.memHandler.reserve(
+                        context=CONSTANT,
+                        dtype=INT,
+                        value=attr.address
+                    )
                     for _ in range(attr.arraySize - 1):
                         self.memHandler.reserve(
                             context=tokenizeContext(self.ctxWrapper.top()),
@@ -827,29 +839,34 @@ class PopurriListener(ParseTreeListener):
             if not self.ctxWrapper.classExists(parent_id):
                 raise error(ctx, UNDEF_PARENT.format(parent_id, class_id))
 
-            # Inherit attributes
+            # Inherit parent attributes
             for attr in self.ctxWrapper.variables[parent_id].values():
-                if (type(attr) != dict  # check if it's a method varTable
-                        and attr.access_type != PRIVATE):
+                if type(attr) != dict:  # check if it's a method varTable
+                    attr = deepcopy(attr)
+                    if attr.access_type == PRIVATE:
+                        attr.access_type = INHERITED_PRIVATE
                     self.ctxWrapper.addVariable(attr, class_id)
                     self.memHandler.reserve(
                         context=LOCAL,
                         dtype=attr.type
                     )
 
-            # Inherit functions
-            for func in self.ctxWrapper.functions[parent_id].values():
-                if func.access_type != PRIVATE:
-                    self.ctxWrapper.addFunction(func, class_id)
-                    # Inherit varTable
-                    method_vars = self.ctxWrapper.variables[parent_id].get(
-                        'func ' + func.id, None)
-                    if method_vars:
-                        # FIXME ??
-                        self.ctxWrapper.variables[class_id]['func ' +
-                                                            func.id] = method_vars
+                    # Attribute is an array, allocate space for its size
+                    if attr.isArray():
+                        # Reserve memory for the literal address. Example: 5000 -> Int
+                        attr.address_address = self.memHandler.reserve(
+                            context=CONSTANT,
+                            dtype=INT,
+                            value=attr.address
+                        )
+                        for _ in range(attr.arraySize - 1):
+                            self.memHandler.reserve(
+                                context=LOCAL,
+                                dtype=attr.type
+                            )
 
         # Parse class attributes
+        address_shift = 0
         for declarations in ctx.attributes():
             access_type = self.getAccessType(declarations)
 
@@ -876,17 +893,74 @@ class PopurriListener(ParseTreeListener):
                     mem_reservations = int(str(attr.CONST_I())) - 1
                     var.arraySize = mem_reservations + 1
 
+                    # Reserve memory for the literal address. Example: 5000 -> Int
+                    var.address_address = self.memHandler.reserve(
+                        context=CONSTANT,
+                        dtype=INT,
+                        value=var.address
+                    )
+
                     # First address is already reserved
                     for _ in range(mem_reservations):
                         reserved_address = self.memHandler.reserve(
                             context=tokenizeContext(self.ctxWrapper.top()),
                             dtype=tokenize(attr.TYPE())
                         )
+                    address_shift += mem_reservations - 1
 
                 self.ctxWrapper.addVariable(var, class_id)
+                address_shift += 1
 
         if class_id not in self.ctxWrapper.variables:  # Add empty varTable if no attributes
             self.ctxWrapper.variables[class_id] = {}
+
+        if ctx.parent() is not None:
+            # Inherit parent methods
+            for func in self.ctxWrapper.functions[parent_id].values():
+                if func.access_type != PRIVATE:
+                    self.ctxWrapper.addFunction(func, class_id)
+
+                    # Inherit its varTable
+                    method_vars = self.ctxWrapper.variables[parent_id].get('func ' + func.id, None)
+                    if method_vars:
+                        method_vars = deepcopy(method_vars)
+                        addresses_to_shift = []
+                        # Need to shift addresses in inherited varTable
+                        for var in method_vars.values():
+                            if type(var) == dict:  # var is an object
+                                for attr in var.values():
+                                    addresses_to_shift.append(attr.address)
+                                    attr.address += address_shift
+
+                                    if attr.isArray():
+                                        self.memHandler.update(attr.address_address, attr.address)
+
+                            addresses_to_shift.append(var.address)
+                            var.address += address_shift
+                            
+                            if var.isArray():
+                                self.memHandler.update(var.address_address, var.address)
+
+                        self.ctxWrapper.variables[class_id]['func ' + func.id] = method_vars
+
+                        # Copy quads and shift addresses used in them
+                        if func.quads_range != (-1, -1):
+                            start, end = func.quads_range
+                            quad_start = self.quadWrapper.quads_ptr + 1
+                            for i in range(start - 1, end + 1):
+                                op, l, r, res = self.quadWrapper.quads[i]
+                                if l in addresses_to_shift:
+                                    l += address_shift
+                                if r in addresses_to_shift:
+                                    r += address_shift
+                                if res in addresses_to_shift:
+                                    res += address_shift
+
+                                self.quadWrapper.insertQuad(Quadruple(op, l, r, res))
+
+                            inherited_method = self.ctxWrapper.getFunction(func.id, class_id)
+                            inherited_method.updateQuadsRange(quad_start, self.quadWrapper.quads_ptr - 1)
+
 
         # Parse class methods
         for method in ctx.method():
@@ -1101,7 +1175,6 @@ class PopurriListener(ParseTreeListener):
             context=TEMPORAL,
             dtype=BOOL
         )
-        print(iterable.arraySize - 1, 'ARRAY SIZE')
         size_constant = self.memHandler.reserve(
             context=CONSTANT,
             dtype=INT,
@@ -1328,7 +1401,6 @@ class PopurriListener(ParseTreeListener):
             self.quadWrapper.popOperator()
 
         if self.if_cond and self.paren_count == 0:
-            self.printDebug()
             cond_ty = self.quadWrapper.popType()
             if cond_ty != BOOL:
                 raise error(ctx, EXPECTED_BOOL.format(stringifyToken(cond_ty)))
@@ -1438,7 +1510,8 @@ class PopurriListener(ParseTreeListener):
                         ids[1], context=class_name)
                 else:  # Accessing attribute outside class
                     attr = class_var.get(ids[1], None)
-                if attr is None:
+
+                if attr is None or attr.access_type == INHERITED_PRIVATE:
                     raise error(ctx, UNDEF_ATTRIBUTE.format(
                         ids[1], class_name))
 
@@ -1543,14 +1616,6 @@ class PopurriListener(ParseTreeListener):
             r=lInf,  # arrays start at 0
             res=lSup))
 
-        # Reserve memory for the literal address. Example: 5000 -> Int
-
-        var_address_address = self.memHandler.reserve(
-            context=CONSTANT,
-            dtype=INT,
-            value=var.address
-        )
-
         tmp = self.memHandler.reserve(
             context=TEMPORAL,
             dtype=POINTER,
@@ -1561,7 +1626,7 @@ class PopurriListener(ParseTreeListener):
         self.quadWrapper.insertQuad(Quadruple(
             op=ADD,
             l=exp_result,
-            r=var_address_address,
+            r=var.address_address,
             res=tmp))
         self.quadWrapper.popAddress()
         self.quadWrapper.insertAddress(tmp)

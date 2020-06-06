@@ -13,6 +13,7 @@ class Parent {
     }
 
     func printParentAttrs() {
+        println('-------parent print-------')
         print('name:', self.name, '\n')
         print('ssn:', self.ssn, '\n')
         print('parent_name:', self.parent_name, '\n')
@@ -30,7 +31,7 @@ class Parent -> Child {
     }
 
     func printChildAttrs() {
-        println('-------parent-------')
+        println('-------child print-------')
         self.printParentAttrs()
         print('age:', self.age, '\n')
         for i in self.toys {

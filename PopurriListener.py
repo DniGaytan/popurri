@@ -525,6 +525,7 @@ class PopurriListener(ParseTreeListener):
         self.memHandler = MemoryHandler(mem_size)
         # Flags for internal compiler use
         self.if_cond = False
+        self.paren_count = 0
         self.inside_expression = False
         self.param_count = -1
         self.func_count = -1
@@ -1326,7 +1327,8 @@ class PopurriListener(ParseTreeListener):
         if len(self.quadWrapper.operator_stack) > 0 and self.quadWrapper.operator_stack[-1] is FALSEBOTTOM:
             self.quadWrapper.popOperator()
 
-        if self.if_cond:
+        if self.if_cond and self.paren_count == 0:
+            self.printDebug()
             cond_ty = self.quadWrapper.popType()
             if cond_ty != BOOL:
                 raise error(ctx, EXPECTED_BOOL.format(stringifyToken(cond_ty)))
@@ -1340,6 +1342,8 @@ class PopurriListener(ParseTreeListener):
             # False bottom for filling breaks inside if/loop
             self.quadWrapper.insertJump(FALSEBOTTOM)
             self.if_cond = False  # Reset flag
+        elif self.paren_count > 0:
+            self.paren_count -= 1
 
         # Function call
         if self.param_count != -1:
@@ -1476,6 +1480,7 @@ class PopurriListener(ParseTreeListener):
         if ctx.cond() is not None:  # nested cond
             # Add fake bottom to operator_stack
             self.quadWrapper.insertOperator(FALSEBOTTOM)
+            self.paren_count += 1
         elif len(ctx.ID()) > 0:  # identifier
             self.validateCalledIds(ctx)
         elif ctx.constant() is not None:  # const

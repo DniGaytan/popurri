@@ -147,9 +147,10 @@ def run(obj_file):
                 del ctx.variables['global'][func_name]
                 memHandler.contexts[GLOBAL].sections[return_var.type].pop()
 
-            if type(l_val) == int and l_val >= 28000 and l_val <= 30000:
-                val_type = memHandler.getAddressType(l_val)
+            if type(l) == int and l >= 28000 and l <= 30000:
+                val_type = memHandler.getAddressType(l)
                 if val_type == POINTER:
+                    l_val = memHandler.getValue(l)
                     l_val = memHandler.getValue(l_val)
             if type(res) == int and res >= 28000 and res <= 30000:
                 res_type = memHandler.getAddressType(res)
@@ -400,10 +401,9 @@ def run(obj_file):
 
         elif op == VERIFY:
             index = l_val
-            lInf = r_val
             lSup = memHandler.getValue(res)
 
-            if index < lInf or index > lSup:
+            if index > lSup:
                 raise Exception(OUT_OF_RANGE.format(index))
 
         ip += 1

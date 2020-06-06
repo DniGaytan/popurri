@@ -1,8 +1,36 @@
 module sort
 
-var arr : [int] [5] = [10, 4, 1, 11, 5 , 9]
-var container : int, iter : int
-container = 0
+var arr : [int] [11] = [10, 4, 1, 11, 5 , 9, 20, 1, 6, 89, 1]
+
+var arrSize : int, iter : int, container : int, val1 : int, val2: int, counter : int
+var limit: int
+# sets arrSize
+for i in arr{
+    arrSize = i
+}
+
+limit = arrSize + 1
+counter = 0
 iter = 0
 
-while(iter < )
+while(counter < limit){
+    arrSize = limit - counter - 1
+    iter = 0
+    while(iter < arrSize){
+        val1 = arr[iter]
+        val2 = arr[iter + 1]
+
+        if (val1 >= val2){
+            container = arr[iter]
+            arr[iter] = arr[iter + 1]
+            arr[iter + 1] = container
+        }
+
+        iter += 1
+    }
+    counter += 1
+}
+
+for i in arr{
+    println(arr[i])
+}

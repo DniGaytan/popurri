@@ -1,9 +1,8 @@
 module arrays_demo
 
-var int_list : [int] [5]
+var int_list : [int] [5] = [1,2,3,4,5]
 
-int_list[0] = 10
-int_list[1] = 5
-int_list[2] = 6
 
-print(int_list[0])
+for i in int_list{
+    print(i)
+}

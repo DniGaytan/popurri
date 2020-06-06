@@ -10,7 +10,7 @@ class A {
 }
 
 class A -> B {
-    var a : int, e : string
+    var e : string
     func func2(int a, float b) float {
         return 3.0
     }

@@ -1650,7 +1650,7 @@ class PopurriListener(ParseTreeListener):
             )
 
             for _ in range(array_base_var.arraySize):
-                reserved_address = self.memHandler.reserve(
+                self.memHandler.reserve(
                     context=tokenizeContext(self.ctxWrapper.top()),
                     dtype=array_base_var.type
                 )

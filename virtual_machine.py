@@ -403,6 +403,8 @@ def run(obj_file):
             index = l_val
             lSup = memHandler.getValue(res)
 
+            if(index > 10000 and memHandler.getValue(index) is not None):
+                index = memHandler.getValue(index)
             if index > lSup:
                 raise Exception(OUT_OF_RANGE.format(index))
 
